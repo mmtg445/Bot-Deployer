@@ -55,17 +55,17 @@ if __name__ == '__main__':
         os.makedirs(bot_path, exist_ok=True)
         with open(f"{bot_path}/bot.js", "w") as f:
             f.write(f"""
-const { Telegraf } = require('telegraf');
 const express = require('express');
 const app = express();
+const { Telegraf } = require('telegraf');
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
 bot.start((ctx) => ctx.reply('Node.js Bot Started!'));
 bot.launch();
 
-app.get('/start', (req, res) => {
+app.get('/start', (req, res) => {{
     res.send('Bot Started');
-});
+}});
 
 app.listen({port});
 """)
@@ -94,8 +94,8 @@ app.listen({port});
             logging.error(f"No bot named '{bot_name}' is running.")
             return False
 
-        # কোড আপডেটের জন্য Git বা অন্যান্য পদ্ধতি ব্যবহার করতে পারেন
         logging.info(f"Updating code for '{bot_name}'...")
+        # কোড আপডেটের জন্য Git বা অন্যান্য পদ্ধতি ব্যবহার করতে পারেন
         return True
 
     def list_bots(self):

@@ -1,7 +1,6 @@
 import os
 import subprocess
 import logging
-import requests
 import psutil
 
 class BotManager:

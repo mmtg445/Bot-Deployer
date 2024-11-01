@@ -1,7 +1,6 @@
 import os
 import subprocess
 import logging
-import psutil
 
 class BotManager:
     def __init__(self):

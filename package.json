@@ -1,0 +1,13 @@
+{
+  "name": "bot-manager",
+  "version": "1.0.0",
+  "description": "Node.js based bot manager",
+  "main": "bot_manager.js",
+  "scripts": {
+    "start": "node bot_manager.js"
+  },
+  "dependencies": {
+    "telegraf": "^4.5.3",
+    "express": "^4.17.2"
+  }
+}

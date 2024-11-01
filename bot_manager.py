@@ -1,6 +1,8 @@
 import os
 import subprocess
 import logging
+import requests
+import psutil
 
 class BotManager:
     def __init__(self):
@@ -14,11 +16,10 @@ class BotManager:
 
         port = self.base_port + len(self.bots)
         bot_path = f"bots/{bot_name}"
-        os.makedirs(bot_path, exist_ok=True)
-
+        
         if language == "python":
             self.create_python_bot(bot_name, port)
-            process = subprocess.Popen(["python3", f"{bot_path}/bot.py"])
+            process = subprocess.Popen(["python", f"{bot_path}/bot.py"])
         elif language == "nodejs":
             self.create_node_bot(bot_name, port)
             process = subprocess.Popen(["node", f"{bot_path}/bot.js"])
@@ -29,16 +30,21 @@ class BotManager:
 
     def create_python_bot(self, bot_name, port):
         bot_path = f"bots/{bot_name}"
+        os.makedirs(bot_path, exist_ok=True)
         with open(f"{bot_path}/bot.py", "w") as f:
             f.write(f"""
 import os
+import telebot
 from flask import Flask
 
+API_TOKEN = os.getenv("API_TOKEN")
+bot = telebot.TeleBot(API_TOKEN)
 app = Flask(__name__)
 
-@app.route('/')
-def hello():
-    return "Python Bot Running!"
+@app.route('/start', methods=['GET'])
+def start():
+    bot.send_message(chat_id, "Python Bot Started!")
+    return "Bot Started", 200
 
 if __name__ == '__main__':
     app.run(port={port})
@@ -46,18 +52,22 @@ if __name__ == '__main__':
 
     def create_node_bot(self, bot_name, port):
         bot_path = f"bots/{bot_name}"
+        os.makedirs(bot_path, exist_ok=True)
         with open(f"{bot_path}/bot.js", "w") as f:
             f.write(f"""
+const { Telegraf } = require('telegraf');
 const express = require('express');
 const app = express();
+const bot = new Telegraf(process.env.BOT_TOKEN);
 
-app.get('/', (req, res) => {{
-    res.send('Node.js Bot Running!');
-}});
+bot.start((ctx) => ctx.reply('Node.js Bot Started!'));
+bot.launch();
 
-app.listen({port}, () => {{
-    console.log('Bot running on port {port}');
-}});
+app.get('/start', (req, res) => {
+    res.send('Bot Started');
+});
+
+app.listen({port});
 """)
 
     def stop_bot(self, bot_name):
@@ -72,5 +82,44 @@ app.listen({port}, () => {{
         logging.info(f"Bot '{bot_name}' stopped.")
         return True
 
+    def restart_bot(self, bot_name):
+        if not self.stop_bot(bot_name):
+            return False
+        bot_info = self.bots.get(bot_name)
+        return self.deploy_bot(bot_name, bot_info["language"]) if bot_info else False
+
+    def update_bot_code(self, bot_name):
+        bot_info = self.bots.get(bot_name)
+        if not bot_info:
+            logging.error(f"No bot named '{bot_name}' is running.")
+            return False
+
+        # কোড আপডেটের জন্য Git বা অন্যান্য পদ্ধতি ব্যবহার করতে পারেন
+        logging.info(f"Updating code for '{bot_name}'...")
+        return True
+
     def list_bots(self):
         return [{"name": name, "port": info["port"]} for name, info in self.bots.items()]
+
+    def get_logs(self, bot_name):
+        log_path = f"logs/{bot_name}.log"
+        if os.path.exists(log_path):
+            with open(log_path, "r") as f:
+                return f.read()
+        return "No logs found."
+
+    def get_resource_usage(self):
+        cpu_usage = psutil.cpu_percent()
+        ram_usage = psutil.virtual_memory().percent
+        return f"CPU Usage: {cpu_usage}%\nRAM Usage: {ram_usage}%"
+
+    def check_health(self):
+        health_data = []
+        for bot_name, bot_info in self.bots.items():
+            try:
+                response = requests.get(f"http://localhost:{bot_info['port']}/start")
+                status = "Running" if response.status_code == 200 else "Down"
+            except:
+                status = "Down"
+            health_data.append({"name": bot_name, "status": status})
+        return health_data

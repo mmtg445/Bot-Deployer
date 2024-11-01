@@ -8,6 +8,7 @@ class BotManager:
     def __init__(self):
         self.bots = {}
         self.base_port = 8000
+        os.makedirs("logs", exist_ok=True)
 
     def deploy_bot(self, bot_name, language):
         if bot_name in self.bots:
@@ -19,12 +20,12 @@ class BotManager:
         
         if language == "python":
             self.create_python_bot(bot_name, port)
-            process = subprocess.Popen(["python", f"{bot_path}/bot.py"])
+            process = subprocess.Popen(["python", f"{bot_path}/bot.py"], stdout=open(f"logs/{bot_name}.log", "w"), stderr=subprocess.STDOUT)
         elif language == "nodejs":
             self.create_node_bot(bot_name, port)
-            process = subprocess.Popen(["node", f"{bot_path}/bot.js"])
+            process = subprocess.Popen(["node", f"{bot_path}/bot.js"], stdout=open(f"logs/{bot_name}.log", "w"), stderr=subprocess.STDOUT)
 
-        self.bots[bot_name] = {"process": process, "port": port}
+        self.bots[bot_name] = {"process": process, "port": port, "language": language}
         logging.info(f"Bot '{bot_name}' deployed on port {port}.")
         return port
 
@@ -57,7 +58,7 @@ if __name__ == '__main__':
             f.write(f"""
 const express = require('express');
 const app = express();
-const { Telegraf } = require('telegraf');
+const {{ Telegraf }} = require('telegraf');
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
 bot.start((ctx) => ctx.reply('Node.js Bot Started!'));
@@ -83,10 +84,13 @@ app.listen({port});
         return True
 
     def restart_bot(self, bot_name):
-        if not self.stop_bot(bot_name):
-            return False
         bot_info = self.bots.get(bot_name)
-        return self.deploy_bot(bot_name, bot_info["language"]) if bot_info else False
+        if not bot_info:
+            logging.error(f"No bot named '{bot_name}' is running.")
+            return False
+
+        self.stop_bot(bot_name)
+        return self.deploy_bot(bot_name, bot_info["language"])
 
     def update_bot_code(self, bot_name):
         bot_info = self.bots.get(bot_name)
@@ -95,7 +99,7 @@ app.listen({port});
             return False
 
         logging.info(f"Updating code for '{bot_name}'...")
-        # কোড আপডেটের জন্য Git বা অন্যান্য পদ্ধতি ব্যবহার করতে পারেন
+        # Here, implement Git or another method to update the bot code
         return True
 
     def list_bots(self):
